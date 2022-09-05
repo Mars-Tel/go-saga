@@ -7,6 +7,7 @@ import (
 	"log"
 	"math/rand"
 	"reflect"
+	"sync"
 	"time"
 )
 
@@ -38,6 +39,8 @@ type ExecutionCoordinator struct {
 	saga *Saga
 
 	logStore Store
+
+	mu sync.Mutex
 }
 
 func (c *ExecutionCoordinator) Play() *Result {
@@ -49,9 +52,16 @@ func (c *ExecutionCoordinator) Play() *Result {
 		Type:        LogTypeStartSaga,
 	}))
 
+	var wg sync.WaitGroup
 	for i := 0; i < len(c.saga.steps); i++ {
-		c.execStep(i)
+		i := i
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			c.execStep(i)
+		}()
 	}
+	wg.Wait()
 
 	checkErr(c.logStore.AppendLog(&Log{
 		ExecutionID:  c.ExecutionID,
@@ -68,6 +78,7 @@ func (c *ExecutionCoordinator) execStep(i int) {
 		return
 	}
 	start := time.Now()
+
 	f := c.saga.steps[i].Func
 
 	params := []reflect.Value{reflect.ValueOf(c.funcsCtx)}
@@ -143,7 +154,9 @@ func (c *ExecutionCoordinator) abort() {
 		params = append(params, unmarshal...)
 
 		if err := c.compensateStep(*toCompensateLog.StepNumber, params, compensateFuncValue); err != nil {
+			c.mu.Lock()
 			c.compensateErrors = append(c.compensateErrors, err)
+			defer c.mu.Unlock()
 		}
 	}
 }

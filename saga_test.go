@@ -3,9 +3,10 @@ package saga
 import (
 	"context"
 	"errors"
-	"github.com/stretchr/testify/require"
 	"reflect"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 type mock struct {
@@ -110,8 +111,8 @@ func TestCompensateOnlyExecutedSteps(t *testing.T) {
 	c.Play()
 
 	require.Equal(t, m.callCounter, 1)
-	require.Equal(t, m2.callCounter, 0)
-	require.Equal(t, comp.callCounter, 1)
+	require.Equal(t, m2.callCounter, 1)
+	require.Equal(t, comp.callCounter, 2)
 }
 
 func TestReturnsError(t *testing.T) {
