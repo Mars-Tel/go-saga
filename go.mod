@@ -1,4 +1,4 @@
-module github.com/itimofeev/go-saga
+module github.com/mars-tel/go-saga
 
 go 1.13
 
